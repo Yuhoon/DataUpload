@@ -8,6 +8,10 @@ import android.view.View;
 
 import com.wcong.dataupload.bury.UploadUtil;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * Created by wangcong on 2017/6/28.
@@ -40,6 +44,8 @@ public class DemoDialog extends Dialog implements View.OnClickListener {
                 break;
             case R.id.cancel:
                 UploadUtil.getInstance().upload(TestBury.class, TestBury.cancel);
+                Map map=new HashMap();
+                map.put("testFiled",System.currentTimeMillis());
                 break;
         }
     }

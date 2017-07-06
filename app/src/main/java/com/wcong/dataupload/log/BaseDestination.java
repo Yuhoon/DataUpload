@@ -1,5 +1,6 @@
 package com.wcong.dataupload.log;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,4 +22,6 @@ public interface BaseDestination {
     void setnterval(int interval);
 
     boolean accept(LogLevel level);
+
+    Map<UploadPolicy,Boolean> getPolicy();
 }

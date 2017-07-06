@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 
+import com.wcong.dataupload.log.Logger;
+
 public class BuryBaseActivity extends AppCompatActivity {
 
     private Class buryClass;
@@ -17,6 +19,7 @@ public class BuryBaseActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Logger.setContext(this);
     }
 
     @Override

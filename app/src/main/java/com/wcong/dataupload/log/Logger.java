@@ -9,6 +9,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
+import com.wcong.dataupload.BuildConfig;
 import com.wcong.dataupload.util.Bean2MapUtil;
 import com.wcong.dataupload.util.DeviceInfoUtil;
 
@@ -58,6 +59,10 @@ public class Logger {
         destinations.put(destination, queue);
         Logger.Worker worker = new Logger.Worker(destination, queue);
         worker.start();
+    }
+
+    public static void setContext(Context context){
+        Logger.context=context;
     }
 
     public static void info(String message) {
@@ -162,6 +167,10 @@ public class Logger {
             //处理分发事件，判断当前destination是否为支持类型
             if (!destination.accept(logLevel))
                 continue;
+            if (BuildConfig.DEBUG && !destination.getPolicy().get(UploadPolicy.UPLOAD_POLICY_DEBUG)) {
+                Log.e("Logger", "无法在Debug模式下上传");
+                continue;
+            }
             data.put(LogField.LEVEL, logLevel);
             if (sync) {
                 destination.send(setField(data));

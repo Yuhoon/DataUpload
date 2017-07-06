@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.wcong.dataupload.util.DeviceInfoUtil;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,6 +16,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,10 @@ public class LogStashDescription implements BaseDestination {
     private boolean isSending = false;
     private OkHttpClient client;
 
+    private Map<UploadPolicy, Boolean> policies;
+
+    private String TAG = getClass().getSimpleName() + "-";
+
     public LogStashDescription(Context context, LogLevel... level) {
         this(context);
         this.level = Arrays.asList(level);
@@ -66,6 +72,15 @@ public class LogStashDescription implements BaseDestination {
         sendingFile = new File(context.getFilesDir().getAbsolutePath(), "logger.sending.json");
 
         gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss SSS").create();
+        policies = initPolicies();
+    }
+
+    private Map<UploadPolicy, Boolean> initPolicies() {
+        Map<UploadPolicy, Boolean> map = new HashMap<>();
+        map.put(UploadPolicy.UPLOAD_POLICY_DEBUG, false);
+        map.put(UploadPolicy.UPLOAD_POLICY_REALTIME, false);
+        map.put(UploadPolicy.UPLOAD_POLICY_WIFI, false);
+        return map;
     }
 
     public void send(Map data) {
@@ -80,6 +95,12 @@ public class LogStashDescription implements BaseDestination {
             }
 
             points += ((LogLevel) data.get(LogField.LEVEL)).point;
+            if (getPolicy().get(UploadPolicy.UPLOAD_POLICY_WIFI) && !DeviceInfoUtil.getNetworkType(context).equals("WIFI")) {
+                Log.e(TAG, "只能在wifi下上传");
+                return;
+            }
+            if (getPolicy().get(UploadPolicy.UPLOAD_POLICY_REALTIME))
+                initialSending = true;
             if (points >= THRESHOLD && points >= MIN_THRESHOLD || points > MAX_THRESHOLD) {
                 sendNow();
             } else if (initialSending) {
@@ -131,6 +152,18 @@ public class LogStashDescription implements BaseDestination {
         return false;
     }
 
+    @Override
+    public Map<UploadPolicy, Boolean> getPolicy() {
+        return policies;
+    }
+
+    public void setPolicy(UploadPolicy... policy) {
+        List<UploadPolicy> list = Arrays.asList(policy);
+        for (UploadPolicy uploadPolicy : list) {
+            getPolicy().put(uploadPolicy, true);
+        }
+    }
+
     public synchronized void sendNow() {
         if (sendingFile.exists()) {
             points = 0;
@@ -151,7 +184,7 @@ public class LogStashDescription implements BaseDestination {
                 }
 
                 boolean deleted = entriesFile.delete();
-                Log.i("delete entriesFile", "" + deleted);
+                Log.i(TAG + "delete entriesFile", "" + deleted);
                 if (deleted) {
                     entriesFile.createNewFile();
                 }
@@ -165,7 +198,7 @@ public class LogStashDescription implements BaseDestination {
             List<Map> logModels = readFromFile(sendingFile);
             if (logModels.size() <= 0) {
                 boolean deleted = sendingFile.delete();
-                Log.i("delete sendingFile", "empty " + deleted);
+                Log.i(TAG + "delete sendingFile", "empty " + deleted);
                 isSending = false;
                 return;
             } else {
@@ -180,19 +213,19 @@ public class LogStashDescription implements BaseDestination {
                         @Override
                         public void onFailure(Call call, IOException e) {
                             isSending = false;
-                            Log.i("上传日志到服务器的Request请求失败", e.getMessage());
+                            Log.e(TAG + "上传日志到服务器的Request请求失败", e.getMessage());
                         }
 
                         @Override
                         public void onResponse(Call call, Response response) throws IOException {
                             if (response.isSuccessful()) {
                                 boolean deleted = sendingFile.delete();
-                                Log.i("delete sendingFile", "" + deleted);
+                                Log.e("delete sendingFile", "" + deleted);
                                 isSending = false;
                                 points = 0;
                             } else {
                                 isSending = false;
-                                Log.i("上传日志到服务器的Request请求失败", response.message());
+                                Log.e(TAG + "上传日志到服务器的Request请求失败", response.message());
                             }
                         }
                     });
@@ -200,7 +233,7 @@ public class LogStashDescription implements BaseDestination {
                 } catch (Exception e) {
                     e.printStackTrace();
                     isSending = false;
-                    Log.i("上传日志错误", e.getMessage());
+                    Log.e(TAG + "上传日志错误", e.getMessage());
                 }
             }
 
